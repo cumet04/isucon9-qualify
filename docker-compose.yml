@@ -15,7 +15,7 @@ services:
       - 8000:8000
 
   payment:
-    image: golang:1.12
+    image: golang:1.13
     command: sh -c "go build -o bin/payment cmd/payment/main.go && ./bin/payment"
     environment:
       GO111MODULE: 'on'
@@ -27,7 +27,7 @@ services:
       - 5555:5555
 
   shipment:
-    image: golang:1.12
+    image: golang:1.13
     command: sh -c "go build -o bin/shipment cmd/shipment/main.go && ./bin/shipment"
     environment:
       GO111MODULE: 'on'
@@ -37,6 +37,27 @@ services:
       - go:/go
     ports:
       - 7000:7000
+
+  bench:
+    image: golang:1.13
+    command: |
+      sh -c "
+        go build -o bin/benchmarker cmd/bench/main.go && \
+        go build -o bin/benchmark-worker cmd/bench-worker/main.go && \
+        ./bin/benchmarker \
+          -target-url http://ruby:8000 \
+          -shipment-url http://bench:7000 \
+          -payment-url http://bench:5555
+      "
+    environment:
+      GO111MODULE: 'on'
+    working_dir: /opt
+    volumes:
+      - .:/opt
+      - go:/go
+    ports:
+      - 5555
+      - 7000
 
   db:
     image: mysql:5.7
