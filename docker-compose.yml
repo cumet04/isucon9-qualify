@@ -1,19 +1,6 @@
 version: '3'
 
 services:
-  ruby:
-    build:
-      context: webapp/ruby
-    command: bundle exec rackup -o 0.0.0.0 -p 8000
-    environment:
-      MYSQL_HOST: 'db'
-    volumes:
-      - ./webapp/public:/public
-      - ./webapp/sql:/sql
-      - ./webapp/ruby:/app
-    ports:
-      - 8000:8000
-
   payment:
     image: golang:1.13
     command: sh -c "go build -o bin/payment cmd/payment/main.go && ./bin/payment"
@@ -37,27 +24,6 @@ services:
       - go:/go
     ports:
       - 7000:7000
-
-  bench:
-    image: golang:1.13
-    command: |
-      sh -c "
-        go build -o bin/benchmarker cmd/bench/main.go && \
-        go build -o bin/benchmark-worker cmd/bench-worker/main.go && \
-        ./bin/benchmarker \
-          -target-url http://ruby:8000 \
-          -shipment-url http://bench:7000 \
-          -payment-url http://bench:5555
-      "
-    environment:
-      GO111MODULE: 'on'
-    working_dir: /opt
-    volumes:
-      - .:/opt
-      - go:/go
-    ports:
-      - 5555
-      - 7000
 
   db:
     image: mysql:5.7
