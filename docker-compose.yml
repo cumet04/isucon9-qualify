@@ -1,0 +1,55 @@
+version: '3'
+
+services:
+  ruby:
+    build:
+      context: webapp/ruby
+    command: bundle exec rackup -o 0.0.0.0 -p 8000
+    environment:
+      MYSQL_HOST: 'db'
+    volumes:
+      - ./webapp/public:/public
+      - ./webapp/sql:/sql
+      - ./webapp/ruby:/app
+    ports:
+      - 8000:8000
+
+  payment:
+    image: golang:1.12
+    command: sh -c "go build -o bin/payment cmd/payment/main.go && ./bin/payment"
+    environment:
+      GO111MODULE: 'on'
+    working_dir: /opt
+    volumes:
+      - .:/opt
+      - go:/go
+    ports:
+      - 5555:5555
+
+  shipment:
+    image: golang:1.12
+    command: sh -c "go build -o bin/shipment cmd/shipment/main.go && ./bin/shipment"
+    environment:
+      GO111MODULE: 'on'
+    working_dir: /opt
+    volumes:
+      - .:/opt
+      - go:/go
+    ports:
+      - 7000:7000
+
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_DATABASE: 'isucari'
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+      MYSQL_USER: 'isucari'
+      MYSQL_PASSWORD: 'isucari'
+    ports:
+      - 3306:3306
+    volumes:
+      - db:/var/lib/mysql
+
+volumes:
+  db:
+  go:
