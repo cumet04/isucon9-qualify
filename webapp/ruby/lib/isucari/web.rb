@@ -263,22 +263,18 @@ module Isucari
       created_at = params["created_at"].to_i
 
       db.query("BEGIN")
-      items = if item_id > 0 && created_at > 0
-          # paging
-          begin
-            db.xquery("SELECT * FROM `items` WHERE (`seller_id` = ? OR `buyer_id` = ?) AND (`created_at` < ?  OR (`created_at` <= ? AND `id` < ?)) ORDER BY `created_at` DESC, `id` DESC LIMIT #{TRANSACTIONS_PER_PAGE + 1}", user["id"], user["id"], Time.at(created_at), Time.at(created_at), item_id)
+      items = begin
+          is_page = item_id > 0 && created_at > 0
+          query = [
+            "SELECT * FROM `items`",
+            "WHERE (`seller_id` = ? OR `buyer_id` = ?)",
+            is_page ? "AND (`created_at` < ?  OR (`created_at` <= ? AND `id` < ?))" : nil,
+            "ORDER BY `created_at` DESC, `id` DESC LIMIT #{TRANSACTIONS_PER_PAGE + 1}",
+          ].compact.join(" ")
+          db.xquery(query, user["id"], user["id"], *(is_page ? [Time.at(created_at), Time.at(created_at), item_id] : []))
           rescue
             db.query("ROLLBACK")
             halt_with_error 500, "db error"
-          end
-        else
-          # 1st page
-          begin
-            db.xquery("SELECT * FROM `items` WHERE (`seller_id` = ? OR `buyer_id` = ?) ORDER BY `created_at` DESC, `id` DESC LIMIT #{TRANSACTIONS_PER_PAGE + 1}", user["id"], user["id"])
-          rescue
-            db.query("ROLLBACK")
-            halt_with_error 500, "db error"
-          end
         end
 
       item_details = items.map do |item|
