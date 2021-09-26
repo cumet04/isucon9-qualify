@@ -272,9 +272,9 @@ module Isucari
             "ORDER BY `created_at` DESC, `id` DESC LIMIT #{TRANSACTIONS_PER_PAGE + 1}",
           ].compact.join(" ")
           db.xquery(query, user["id"], user["id"], *(is_page ? [Time.at(created_at), Time.at(created_at), item_id] : []))
-          rescue
-            db.query("ROLLBACK")
-            halt_with_error 500, "db error"
+        rescue
+          db.query("ROLLBACK")
+          halt_with_error 500, "db error"
         end
 
       item_details = items.map do |item|
