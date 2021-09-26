@@ -169,10 +169,7 @@ module Isucari
 
       item_simples = items.map do |item|
         seller = get_user_simple_by_id(item["seller_id"])
-        halt_with_error 404, "seller not found" if seller.nil?
-
         category = get_category_by_id(item["category_id"])
-        halt_with_error 404, "category not found" if category.nil?
 
         {
           "id" => item["id"],
@@ -425,18 +422,12 @@ module Isucari
     # getItem
     get "/items/:item_id.json" do
       item_id = params["item_id"].to_i
-      halt_with_error 400, "incorrect item id" if item_id <= 0
 
       user = get_user
 
       item = db.xquery("SELECT * FROM `items` WHERE `id` = ?", item_id).first
-      halt_with_error 404, "item not found" if item.nil?
-
       category = get_category_by_id(item["category_id"])
-      halt_with_error 404, "category not found" if category.nil?
-
       seller = get_user_simple_by_id(item["seller_id"])
-      halt_with_error 404, "seller not found" if seller.nil?
 
       item_detail = {
         "id" => item["id"],
@@ -459,7 +450,6 @@ module Isucari
 
       if (user["id"] == item["seller_id"] || user["id"] == item["buyer_id"]) && item["buyer_id"] != 0
         buyer = get_user_simple_by_id(item["buyer_id"])
-        halt_with_error 404, "buyer not found" if buyer.nil?
 
         item_detail["buyer_id"] = item["buyer_id"]
         item_detail["buyer"] = buyer
@@ -467,7 +457,6 @@ module Isucari
         transaction_evidence = db.xquery("SELECT * FROM `transaction_evidences` WHERE `item_id` = ?", item["id"]).first
         unless transaction_evidence.nil?
           shipping = db.xquery("SELECT * FROM `shippings` WHERE `transaction_evidence_id` = ?", transaction_evidence["id"]).first
-          halt_with_error 404, "shipping not found" if shipping.nil?
 
           item_detail["transaction_evidence_id"] = transaction_evidence["id"]
           item_detail["transaction_evidence_status"] = transaction_evidence["status"]
@@ -491,10 +480,8 @@ module Isucari
       end
 
       seller = get_user
-      halt_with_error 404, "user not found" if seller.nil?
 
       target_item = db.xquery("SELECT * FROM `items` WHERE `id` = ?", item_id).first
-      halt_with_error 404, "item not found" if target_item.nil?
 
       if target_item["seller_id"] != seller["id"]
         halt_with_error 403, "自分の商品以外は編集できません"
