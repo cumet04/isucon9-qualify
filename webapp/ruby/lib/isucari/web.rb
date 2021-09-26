@@ -5,6 +5,7 @@ require "mysql2"
 require "mysql2-cs-bind"
 require "bcrypt"
 require "isucari/api"
+require "isucari/category"
 
 module Isucari
   class Web < Sinatra::Base
@@ -66,6 +67,10 @@ module Isucari
         )
       end
 
+      def category
+        Thread.current[:category] ||= Isucari::Category.new(db)
+      end
+
       def api_client
         Thread.current[:api_client] ||= ::Isucari::API.new
       end
@@ -91,24 +96,7 @@ module Isucari
       end
 
       def get_category_by_id(category_id)
-        category = db.xquery("SELECT * FROM `categories` WHERE `id` = ?", category_id).first
-
-        return if category.nil?
-
-        parent_category_name = if category["parent_id"] != 0
-            parent_category = get_category_by_id(category["parent_id"])
-
-            return if parent_category.nil?
-
-            parent_category["category_name"]
-          end
-
-        {
-          "id" => category["id"],
-          "parent_id" => category["parent_id"],
-          "category_name" => category["category_name"],
-          "parent_category_name" => parent_category_name,
-        }
+        category.find(category_id)
       end
 
       def get_config_by_name(name)
@@ -222,7 +210,7 @@ module Isucari
       root_category = get_category_by_id(root_category_id)
       halt_with_error 404, "category not found" if root_category.nil?
 
-      category_ids = db.xquery("SELECT id FROM `categories` WHERE parent_id = ?", root_category["id"]).map { |row| row["id"] }
+      category_ids = category.children_for(root_category["id"]).map { |c| c["id"] }
 
       item_id = params["item_id"].to_i
       created_at = params["created_at"].to_i
@@ -1137,8 +1125,10 @@ module Isucari
       response["user"] = user unless user.nil?
       response["payment_service_url"] = get_payment_service_url
 
-      categories = db.xquery("SELECT * FROM `categories`").to_a
-      response["categories"] = categories
+      response["categories"] = category.all.map { |c|
+        c.dup.delete("parent_category_name")
+        c
+      }
 
       response.to_json
     end
